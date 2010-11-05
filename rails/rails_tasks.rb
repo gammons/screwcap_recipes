@@ -1,10 +1,24 @@
+#######################################
+# Variables
+#######################################
+
 set :stamp, Time.now.utc.strftime("%Y%m%d%H%M.%S")
 set :release_dir, "#{deploy_dir}/releases/#{stamp}"
 set :current_dir, "#{deploy_dir}/current"
 set :shared_dir, "#{deploy_dir}/shared"
 set :pid_dir, "#{shared_dir}/pids"
 
+# override these commands to use different source control management type or strategy
+set :scm, :git
+set :strategy, :scm
+set :app_server, :mongrel
+
+#######################################
+# Base commands
+#######################################
+
 command_set :create_directory_structure do
+  # ensure these exist
   run "mkdir -p #{deploy_dir}/shared/pids"
   run "mkdir -p #{deploy_dir}/shared/system"
   run "mkdir -p #{deploy_dir}/shared/log"
@@ -17,22 +31,49 @@ command_set :after_checkout do
   run "ln -nfs #{deploy_dir}/shared/system #{deploy_dir}/system"
 end
 
+command_set :do_symlink do
+  run "rm -f #{deploy_dir}/current"
+  run "ln -s #{release_dir} #{deploy_dir}/current"
+end
+
+#######################################
+# SCM-specific checkout commands
+#######################################
+
 command_set :svn_check_out do
-  create_directory_structure
   run "svn co #{svn_url} --username=#{svn_user} --password=#{svn_password} -q #{release_dir}"
   after_checkout
 end
 
 command_set :git_check_out do
-  create_directory_structure
   run "git clone --depth 10 #{git_url} #{release_dir}"
   after_checkout
 end
 
-command_set :do_symlink do
-  run "rm -f #{deploy_dir}/current"
-  run "ln -s #{release_dir} #{deploy_dir}/current"
+command_set :checkout do
+  case scm
+  when :git
+    git_check_out
+  when :svn
+    svn_check_out
+  else
+    $stderr << "Unknown source control type.\n"
+    Kernel.exit(1)
+  end
 end
+
+command_set :do_copy do
+  local "tar -czvf #{stamp}.tgz ./app  > /dev/null"
+  scp :local => "#{stamp}.tgz", :remote => "#{release_dir}/#{stamp}.tgz"
+  run "cd #{release_dir} && tar -zxvf #{stamp}.tgz > /dev/null"
+  local "rm -rf #{stamp}.tgz"
+  run "rm -rf #{release_dir}/#{stamp}.tgz"
+end
+
+
+#######################################
+# Application server specific commands
+#######################################
 
 command_set :restart_mongrels do
   run "for file in #{pid_dir}/*.pid; do mongrel_rails stop -P ${file} 2&>1; sleep 5;  done"
@@ -40,4 +81,35 @@ end
 
 command_set :restart_passenger do
   run "touch #{current_dir}/tmp/restart.txt"
+end
+
+command_set :restart_app_server do
+  case app_server
+  when :mongrel
+    restart_mongrels
+  when :passenger
+    restart_passenger
+  end
+end
+
+#######################################
+# Macro recipes that put it all together
+#######################################
+
+command_set :push_code do
+  case strategy
+  when :scm
+    checkout
+  when :copy
+    run "mkdir -p #{release_dir}"
+    do_copy
+  end
+end
+
+command_set :deploy do
+  create_directory_structure
+  push_code
+  after_checkout
+  do_symlink
+  restart_app_server
 end
