@@ -9,9 +9,9 @@ set :shared_dir, "#{deploy_dir}/shared"
 set :pid_dir, "#{shared_dir}/pids"
 
 # override these commands to use different source control management type or strategy
-set :scm, :git
-set :strategy, :scm
-set :app_server, :mongrel
+set(:scm, :git) unless self.respond_to?(:scm)
+set(:strategy, :scm) unless self.respond_to?(:strategy)
+set(:app_server, :mongrel) unless self.respond_to?(:app_server)
 
 #######################################
 # Base commands
