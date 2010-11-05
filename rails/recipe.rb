@@ -14,18 +14,27 @@ set :deploy_dir, "/mnt/rails/myapp"
 set :git_url, "git@dev.myapp.com:myapp.git"
 set :git_branch, "release"
 
+# The default scm is git.  Uncomment below to use subversion.
+#set :scm, :svn
+
+# The default deployment strategy is to use a scm checkout.
+# uncomment below to use the copy strategy, which will tar up your current directory,
+# send it to the remote, and untar it.
+#set :strategy, :copy
+
+# use the standard rails tasks file, available for study in config/screwcap/rails_tasks.rb 
 use :rails_tasks
 
 #######################
 # Tasks
 #######################
 
-task_for :deploy_to_app_servers, :server => :app_servers do
+task :deploy_to_app_servers, :server => :app_servers do
   git_check_out
   restart_passenger
 end
 
-task_for :migrate_db, :server => :background_worker do
+task :migrate_db, :server => :background_worker do
   run "cd #{current_dir} && rake db:migrate"
 end
 
