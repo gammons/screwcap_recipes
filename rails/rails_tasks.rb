@@ -36,6 +36,13 @@ command_set :do_symlink do
   run "ln -s #{release_dir} #{deploy_dir}/current"
 end
 
+command_set :app_rollback do
+  run "rm -f #{deploy_dir}/current"
+  run "echo \"ln -nfs #{deploy_dir}/releases/\\\`ls #{deploy_dir}/releases/ | tail -n 2 | head -n 1\\\` #{current_dir}\" > /tmp/rollback"
+  run "chmod +x /tmp/rollback && /tmp/rollback"
+  run "rm -rf /tmp/rollback"
+end
+
 #######################################
 # SCM-specific checkout commands
 #######################################
