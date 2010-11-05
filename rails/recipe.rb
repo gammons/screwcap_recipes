@@ -30,8 +30,9 @@ use :rails_tasks
 #######################
 
 task :deploy_to_app_servers, :server => :app_servers do
-  git_check_out
-  restart_passenger
+  # take a look at the deploy macro task recipe here:
+  # https://github.com/gammons/screwcap_recipes/blob/master/rails/rails_tasks.rb#L117
+  deploy 
 end
 
 task :migrate_db, :server => :background_worker do
