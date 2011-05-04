@@ -28,7 +28,7 @@ command_set :after_checkout do
   run "chmod -R g+w #{release_dir}"
   run "rm -rf #{release_dir}/log"
   run "ln -nfs #{deploy_dir}/shared/log #{release_dir}/log"
-  run "ln -nfs #{deploy_dir}/shared/system #{deploy_dir}/system"
+  run "ln -nfs #{deploy_dir}/shared/system #{release_dir}/public/system"
 end
 
 command_set :do_symlink do
